@@ -154,6 +154,30 @@ const Tile = struct {
     }
 };
 
+const GridRack = Grid(1, 7);
+const Rack = struct {
+    grid: GridRack,
+    border: i32,
+    thick: i32,
+
+    fn draw(self: Rack, rack: rl.Color, spot: rl.Color) void {
+        rl.drawRectangle(
+            self.grid.posX - self.border,
+            self.grid.posY - self.border,
+            self.grid.tile_width * 7 + self.border * 2,
+            self.grid.tile_height + self.border * 2,
+            rack,
+        );
+        rl.drawRectangle(
+            self.grid.posX - self.border,
+            self.grid.posY + self.border + self.grid.tile_height,
+            self.grid.tile_width * 7 + self.border * 2,
+            self.thick,
+            spot,
+        );
+        self.grid.draw(spot);
+    }
+};
 
 pub fn main() anyerror!void {
     const screenWidth = 800;
@@ -161,16 +185,30 @@ pub fn main() anyerror!void {
 
     rl.initWindow(screenWidth, screenHeight, "game game");
     defer rl.closeWindow();
-    rl.setTargetFPS(120);
+    rl.setTargetFPS(60);
 
     const Grid15 = Grid(15, 15);
     var grid = Grid15 {
         .posX = 175,
-        .posY = 75,
+        .posY = 45,
         .tile_width = 30,
         .tile_height = 30,
         .gap = 2,
         .tiles = [_]?Tile{null} ** (15 * 15),
+    };
+
+    const grid_rack = GridRack {
+        .posX = 295,
+        .posY = 525,
+        .tile_width = 30,
+        .tile_height = 30,
+        .gap = 2,
+        .tiles = [_]?Tile{null} ** (7),
+    };
+    var rack = Rack {
+        .grid = grid_rack,
+        .border = 8,
+        .thick = 8,
     };
 
     var tile = Tile {
@@ -194,10 +232,12 @@ pub fn main() anyerror!void {
         defer rl.drawFPS(10, 10);
 
         const t = rl.getTime();
-        rl.drawText("math scrabble game thing", 175, 30, 20, rl.Color.dark_brown.alpha(0.2));
+        rl.drawText("math scrabble game thing", 175, 10, 20, rl.Color.dark_brown.alpha(0.2));
 
         grid = grid.update();
+        rack.grid = rack.grid.update();
         grid.draw(rl.Color.dark_brown.alpha(0.2));
+        rack.draw(rl.Color.sky_blue, rl.Color.blue);
 
         const mouse = rl.getMousePosition();
         const snap = grid.snap(mouse);
@@ -206,6 +246,7 @@ pub fn main() anyerror!void {
 
         if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
             grid = grid.place(tile);
+            rack.grid = rack.grid.place(tile);
             tile.letter += 1;
             if (tile.letter > 65 + 25) {
                 tile.letter = 65;

@@ -9,4 +9,6 @@ I was messing around trying to make a scrabble board. Some notable things:
 Eventually, I'd like to try:
 
 - Fleshing out more of the game
-- Compiling to wasm and putting it up on the web.
+- [x] Compiling to wasm and putting it up on the web.
+- making this network multiplayer?
+- or maybe a single-player game?
