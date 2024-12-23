@@ -1,0 +1,12 @@
+# game game
+
+I was messing around trying to make a scrabble board. Some notable things:
+
+- Written in Zig. I finally got on the Zig train
+- Uses raylib. What a nice library.
+- Using jj to manage version control. Just out of curiosity.
+
+Eventually, I'd like to try:
+
+- Fleshing out more of the game
+- Compiling to wasm and putting it up on the web.
