@@ -1,0 +1,18 @@
+.{
+    .name = "23-raylib-game",
+    .version = "0.0.0",
+    .minimum_zig_version = "0.11.0",
+    .dependencies = .{
+        .@"raylib-zig" = .{
+            .url = "git+https://github.com/Not-Nik/raylib-zig?ref=devel#0dcee846f480125cf0c6217ccd4b77dec4e499d5",
+            .hash = "12208b80634f956fda0609101e55f856deef01f0ac1e59868bebe3bc38272cd31aaa",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        //"LICENSE",
+        //"README.md",
+    },
+}
