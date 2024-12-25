@@ -107,6 +107,7 @@ fn Grid(comptime num_rows: usize, comptime num_cols: usize) type {
             return false;
         }
 
+        /// use coords of tile not of mouse, tile can disappear!
         fn pickUp(self: *Self, pos: rl.Vector2) ?Tile {
             const c = self.coords(pos);
             if (self.toIndex(c.x, c.y)) |index| {
@@ -116,6 +117,11 @@ fn Grid(comptime num_rows: usize, comptime num_cols: usize) type {
                 }
             }
             return null;
+        }
+
+        fn isOver(self: Self, pos: rl.Vector2) bool {
+            const c = self.coords(pos);
+            return self.toIndex(c.x, c.y) != null;
         }
 
         /// given a row and a column, returns the top-left corner in screen space
@@ -338,18 +344,27 @@ pub fn main() anyerror!void {
         rack.draw(rl.Color.sky_blue, rl.Color.blue);
 
         // TODO: don't snap if tile can't be placed
-        var mouse = rl.getMousePosition();
-        const snap = grid.snap(mouse);
-        tile.hover = @floatCast(@sin(t * 4.0) * 2.0 + 4.0);
-        if (grid.canPlace(mouse)) {
-            tile.followMouse(mouse, snap);
-        } else {
-            mouse.y += 4.0;
-            tile.settleInPlace(mouse);
+        {
+            var mouse = rl.getMousePosition();
+            const snap = grid.snap(mouse);
+            tile.hover = @floatCast(@sin(t * 4.0) * 2.0 + 4.0);
+            if (grid.canPlace(mouse)) {
+                tile.followMouse(mouse, snap);
+            } else {
+                mouse.y += 4.0;
+                tile.settleInPlace(mouse);
+            }
         }
 
         if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
             if (tile_visible) {
+                var new_tile: ?Tile = null;
+                if (grid.pickUp(tile.pos)) |got_tile| {
+                    new_tile = got_tile;
+                } else if (rack.grid.pickUp(tile.pos)) |got_tile| {
+                    new_tile = got_tile;
+                }
+
                 const placed_grid = grid.place(tile);
                 const placed_rack = rack.grid.place(tile);
                 const placed = placed_grid or placed_rack;
@@ -360,13 +375,18 @@ pub fn main() anyerror!void {
                 if (placed_grid and rack.isEmpty()) {
                     rack.fill(&bag);
                 }
+
+                if (new_tile) |nt| {
+                    tile = nt;
+                    tile_visible = true;
+                }
             } else {
                 if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
-                    if (grid.pickUp(mouse)) |got_tile| {
+                    if (grid.pickUp(tile.pos)) |got_tile| {
                         tile = got_tile;
                         tile_visible = true;
                         rl.playSound(sound_place_wav);
-                    } else if (rack.grid.pickUp(mouse)) |got_tile| {
+                    } else if (rack.grid.pickUp(tile.pos)) |got_tile| {
                         tile = got_tile;
                         tile_visible = true;
                         rl.playSound(sound_pickup_wav);
@@ -376,16 +396,28 @@ pub fn main() anyerror!void {
         }
 
         if (tile_visible) {
-            if (grid.canPlace(tile.pos)) {
-                tile.draw(rl.Color.purple, rl.Color.dark_purple, rl.Color.white);
-            } else if (rack.grid.canPlace(tile.pos)) {
-                tile.draw(rl.Color.orange, rl.Color.brown, rl.Color.white);
-            } else {
-                const face = rl.Color.white.alpha(0.7);
-                const edge = rl.Color.light_gray.alpha(0.7);
-                const letter = rl.Color.black.alpha(0.3);
-                tile.draw(face, edge, letter);
-            }
+            drawMouseTile(tile, rack, grid);
         }
+    }
+}
+
+fn drawMouseTile(tile: Tile, rack: Rack, grid: GridBoard) void {
+    const p = tile.pos;
+    const grid_over = grid.isOver(p);
+    const grid_place = grid.canPlace(p);
+    const rack_over = rack.grid.isOver(p);
+    const rack_place = rack.grid.canPlace(p);
+
+    if (!grid_over and !rack_over) {
+        const face = rl.Color.white.alpha(0.7);
+        const edge = rl.Color.light_gray.alpha(0.7);
+        const letter = rl.Color.black.alpha(0.3);
+        tile.draw(face, edge, letter);
+    } else if (grid_place) {
+        tile.draw(rl.Color.purple, rl.Color.dark_purple, rl.Color.white);
+    } else if (rack_place) {
+        tile.draw(rl.Color.orange, rl.Color.brown, rl.Color.white);
+    } else {
+        tile.draw(rl.Color.yellow, rl.Color.orange, rl.Color.black);
     }
 }
