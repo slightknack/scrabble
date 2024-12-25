@@ -5,6 +5,7 @@ const image_table = @embedFile("./assets/table-light.jpg");
 const sound_place = @embedFile("./assets/place.wav");
 const sound_pickup = @embedFile("./assets/pickup.wav");
 const sound_tap = @embedFile("./assets/tap.wav");
+const sound_shuffle = @embedFile("./assets/shuffle.wav");
 
 fn Grid(comptime num_rows: usize, comptime num_cols: usize) type {
     return struct {
@@ -192,24 +193,26 @@ const Rack = struct {
     grid: GridRack,
     border: i32,
     thick: i32,
+    button: Button,
 
     /// draws the background rack, and the grid on the rack.
     fn draw(self: Rack, rack: rl.Color, spot: rl.Color) void {
         rl.drawRectangle(
             self.grid.posX - self.border,
             self.grid.posY - self.border,
-            self.grid.tile_width * 7 + self.border * 2,
+            self.grid.tile_width * 8 + self.border * 2,
             self.grid.tile_height + self.border * 2,
             rack,
         );
         rl.drawRectangle(
             self.grid.posX - self.border,
             self.grid.posY + self.border + self.grid.tile_height,
-            self.grid.tile_width * 7 + self.border * 2,
+            self.grid.tile_width * 8 + self.border * 2,
             self.thick,
             spot,
         );
         self.grid.draw(spot);
+        self.button.draw(rl.Color.yellow, rl.Color.orange);
     }
 
     fn fill(self: *Rack, bag: *Bag) void {
@@ -237,6 +240,30 @@ const Rack = struct {
             }
         }
         return empty;
+    }
+
+    fn isFull(self: Rack) bool {
+        for (self.grid.tiles) |tile| {
+            if (tile == null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    fn update(self: *Rack, pos: rl.Vector2, click: *bool, visible: bool, bag: *Bag, sound: rl.Sound) void {
+        self.button.clicked = self.isFull() or visible;
+
+        if (click.*) {
+            const pressed = self.button.click(pos);
+            if (pressed) {
+                click.* = false;
+                self.fill(bag);
+                rl.playSound(sound);
+            }
+        }
+        self.grid.update();
+        self.button.update(pos);
     }
 };
 
@@ -272,6 +299,62 @@ const Bag = struct {
     }
 };
 
+const Button = struct {
+    posX: i32,
+    posY: i32,
+    width: i32,
+    height: i32,
+    min: i32,
+    max: i32,
+    thick: f32,
+    clicked: bool,
+
+    fn draw(self: Button, face: rl.Color, edge: rl.Color) void {
+        const thick: i32 = @intFromFloat(self.thick);
+        rl.drawRectangle(self.posX, self.posY - thick + self.height, self.width, thick, edge);
+        rl.drawRectangle(self.posX, self.posY - thick, self.width, self.height, face);
+    }
+
+    fn click(self: *Button, pos: rl.Vector2) bool {
+        if (self.isOver(pos) and !self.clicked) {
+            self.clicked = true;
+            return true;
+        }
+        return false;
+    }
+
+    fn isOver(self: Button, pos: rl.Vector2) bool {
+        const x = @as(i32, @intFromFloat(pos.x)) - self.posX;
+        const y = @as(i32, @intFromFloat(pos.y)) - self.posY;
+        if (0 > x or x >= self.width) {
+            return false;
+        }
+        if (0 > y or y >= self.height) {
+            return false;
+        }
+        return true;
+    }
+
+    fn update(self: *Button, pos: rl.Vector2) void {
+        // const center = rl.Vector2.init(
+        //     @floatFromInt(self.posX + (self.width >> 1)),
+        //     @floatFromInt(self.posY + (self.height >> 1)),
+        // );
+        // var dist = rl.math.vector2Distance(center, pos);
+        // dist /= @floatFromInt(self.width);
+        // const height = 1.0 / (dist * dist + 1.0);
+        // _ = height;
+        var baseline: f32 = @floatFromInt(self.min); //rl.math.lerp(@floatFromInt(self.max), @floatFromInt(self.min), height);
+        if (self.isOver(pos)) {
+            baseline = @floatFromInt(self.max);
+        }
+        if (self.clicked) {
+            baseline = 0.0;
+        }
+        self.thick = rl.math.lerp(self.thick, baseline, 0.3);
+    }
+};
+
 pub fn main() anyerror!void {
     const screenWidth = 800;
     const screenHeight = 600;
@@ -292,8 +375,18 @@ pub fn main() anyerror!void {
     };
 
     var bag = Bag.fresh();
+    const button = Button{
+        .posX = 505 - 15,
+        .posY = 525,
+        .width = grid.width(),
+        .height = grid.height(),
+        .min = 4,
+        .max = 16,
+        .thick = 4.0,
+        .clicked = true,
+    };
     const grid_rack = GridRack{
-        .posX = 295,
+        .posX = 295 - 15,
         .posY = 525,
         .tile_width = 30,
         .tile_height = 30,
@@ -304,10 +397,11 @@ pub fn main() anyerror!void {
         .grid = grid_rack,
         .border = 8,
         .thick = 8,
+        .button = button,
     };
     rack.fill(&bag);
 
-    var tile: Tile = Tile{
+    var tile = Tile{
         .pos = rl.Vector2.init(0.0, 0.0),
         .width = grid.width(),
         .height = grid.height(),
@@ -323,9 +417,11 @@ pub fn main() anyerror!void {
     const sound_pickup_mem = rl.loadWaveFromMemory(".wav", sound_pickup);
     const sound_place_mem = rl.loadWaveFromMemory(".wav", sound_place);
     const sound_tap_mem = rl.loadWaveFromMemory(".wav", sound_tap);
+    const sound_shuffle_mem = rl.loadWaveFromMemory(".wav", sound_shuffle);
     const sound_pickup_wav = rl.loadSoundFromWave(sound_pickup_mem);
     const sound_place_wav = rl.loadSoundFromWave(sound_place_mem);
     const sound_tap_wav = rl.loadSoundFromWave(sound_tap_mem);
+    const sound_shuffle_wav = rl.loadSoundFromWave(sound_shuffle_mem);
 
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
@@ -335,28 +431,32 @@ pub fn main() anyerror!void {
         rl.drawTexture(image_table_tex, 0, 0, rl.Color.white);
         defer rl.drawFPS(10, 10);
 
+        var mouse_click = rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left);
         const t = rl.getTime();
         rl.drawText("math scrabble game thing", 175, 10, 20, rl.Color.dark_brown.alpha(0.2));
 
         grid.update();
-        rack.grid.update();
         grid.draw(rl.Color.dark_brown.alpha(0.2));
-        rack.draw(rl.Color.sky_blue, rl.Color.blue);
 
         // TODO: don't snap if tile can't be placed
         {
             var mouse = rl.getMousePosition();
             const snap = grid.snap(mouse);
+            const snap_rack = rack.grid.snap(mouse);
             tile.hover = @floatCast(@sin(t * 4.0) * 2.0 + 4.0);
             if (grid.canPlace(mouse)) {
                 tile.followMouse(mouse, snap);
+            } else if (rack.grid.canPlace(mouse)) {
+                tile.followMouse(mouse, snap_rack);
             } else {
                 mouse.y += 4.0;
                 tile.settleInPlace(mouse);
             }
+            rack.update(mouse, &mouse_click, tile_visible, &bag, sound_shuffle_wav);
+            rack.draw(rl.Color.sky_blue, rl.Color.blue);
         }
 
-        if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
+        if (mouse_click) {
             if (tile_visible) {
                 var new_tile: ?Tile = null;
                 if (grid.pickUp(tile.pos)) |got_tile| {
@@ -372,16 +472,13 @@ pub fn main() anyerror!void {
                     tile_visible = false;
                     rl.playSound(sound_tap_wav);
                 }
-                if (placed_grid and rack.isEmpty()) {
-                    rack.fill(&bag);
-                }
 
                 if (new_tile) |nt| {
                     tile = nt;
                     tile_visible = true;
                 }
             } else {
-                if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
+                if (mouse_click) {
                     if (grid.pickUp(tile.pos)) |got_tile| {
                         tile = got_tile;
                         tile_visible = true;
