@@ -12,3 +12,7 @@ Eventually, I'd like to try:
 - [x] Compiling to wasm and putting it up on the web.
 - making this network multiplayer?
 - or maybe a single-player game?
+
+Some next things to add:
+
+- hover when hand is empty and you hover over a tile

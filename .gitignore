@@ -3,3 +3,4 @@ zig-out/*
 .jj/*
 src/assets/*
 **/.DS_Store
+devlog/*

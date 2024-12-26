@@ -336,15 +336,7 @@ const Button = struct {
     }
 
     fn update(self: *Button, pos: rl.Vector2) void {
-        // const center = rl.Vector2.init(
-        //     @floatFromInt(self.posX + (self.width >> 1)),
-        //     @floatFromInt(self.posY + (self.height >> 1)),
-        // );
-        // var dist = rl.math.vector2Distance(center, pos);
-        // dist /= @floatFromInt(self.width);
-        // const height = 1.0 / (dist * dist + 1.0);
-        // _ = height;
-        var baseline: f32 = @floatFromInt(self.min); //rl.math.lerp(@floatFromInt(self.max), @floatFromInt(self.min), height);
+        var baseline: f32 = @floatFromInt(self.min);
         if (self.isOver(pos)) {
             baseline = @floatFromInt(self.max);
         }
@@ -438,7 +430,6 @@ pub fn main() anyerror!void {
         grid.update();
         grid.draw(rl.Color.dark_brown.alpha(0.2));
 
-        // TODO: don't snap if tile can't be placed
         {
             var mouse = rl.getMousePosition();
             const snap = grid.snap(mouse);
