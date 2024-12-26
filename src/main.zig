@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 
-const image_table = @embedFile("./assets/table-light.jpg");
+const image_table = @embedFile("./assets/table.jpg");
 const sound_place = @embedFile("./assets/place.wav");
 const sound_pickup = @embedFile("./assets/pickup.wav");
 const sound_tap = @embedFile("./assets/tap.wav");

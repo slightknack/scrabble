@@ -1,6 +1,6 @@
 zig-out/*
 .zig-cache/*
 .jj/*
-src/assets/*
+#src/assets/*
 **/.DS_Store
 devlog/*
